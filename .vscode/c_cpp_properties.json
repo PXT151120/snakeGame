@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include",
+                "/usr/lib/gcc/x86_64-linux-gnu/14/include",
+                "/usr/include/c++/14",
+                "/usr/include/x86_64-linux-gnu/bits",
+                "/usr/include/x86_64-linux-gnu/c++/14",
+                "/usr/include/x86_64-linux-gnu"
+            ],
+            "defines": [],
+            "cStandard": "c99",
+            "cppStandard": "gnu++11",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

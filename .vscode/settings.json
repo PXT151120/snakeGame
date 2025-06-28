@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "dirent.h": "c",
+        "libgen.h": "c",
+        "limits.h": "c",
+        "udev_helper.h": "c",
+        "type_traits": "c",
+        "filter.h": "c",
+        "input.h": "c"
+    }
+}
