@@ -9,6 +9,7 @@
 #include <linux/input.h>
 #include <libgen.h>
 #include <signal.h>
+#include <math.h>
 
 #include "udev_helper.h"
 #include "input.h"
@@ -19,10 +20,68 @@
 + deadzone filtering
 + working with Flydigi controller?
 */
+
 static int  GamePad_Init(struct GamePad_s*);
 static void GamePad_Close(struct GamePad_s*);
 static int  GamePad_ReadAxis(struct GamePad_s*, tAxisState_s*);
 static int  GamePad_ReadButton(struct GamePad_s*, tButtonState_s*);
+
+static void FilterI_Init(tAxisFilter_s* axisfilter, float dz);
+static void FilterI_AxisUpdate(tAxisFilter_s* axisFilter, tAxisState_s* axisState);
+
+
+static int Filter_IsChange(float old, float new, float dz)
+{
+    return (fabs(new - old) > dz);
+}
+
+void FilterI_Init(tAxisFilter_s* axisfilter, float dz)
+{
+    if (axisfilter)
+    {
+        memset(axisfilter, 0, sizeof(tAxisFilter_s));
+        axisfilter->deadzone = dz;
+    }
+}
+
+void FilterI_AxisUpdate(tAxisFilter_s* axisFilter, tAxisState_s* axisState)
+{
+    if (Filter_IsChange(axisFilter->prevVal.lx, axisState->lx, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.lx = axisState->lx;
+    }
+    else {axisState->lx = axisFilter->prevVal.lx;}
+
+    if (Filter_IsChange(axisFilter->prevVal.ly, axisState->ly, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.ly = axisState->ly;
+    }
+    else {axisState->ly = axisFilter->prevVal.ly;}
+
+    if (Filter_IsChange(axisFilter->prevVal.rx, axisState->rx, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.rx = axisState->rx;
+    }
+    else {axisState->rx = axisFilter->prevVal.rx;}
+
+    if (Filter_IsChange(axisFilter->prevVal.ry, axisState->ry, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.ry = axisState->ry;
+    }
+    else {axisState->ry = axisFilter->prevVal.ry;}
+
+    if (Filter_IsChange(axisFilter->prevVal.lt, axisState->lt, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.lt = axisState->lt;
+    }
+    else {axisState->lt = axisFilter->prevVal.lt;}
+
+    if (Filter_IsChange(axisFilter->prevVal.rt, axisState->rt, axisFilter->deadzone))
+    {
+        axisFilter->prevVal.rt = axisState->rt;
+    }
+    else {axisState->rt = axisFilter->prevVal.rt;}
+}
 
 
 tGamePad_s* GamePad_Constructor()
@@ -91,7 +150,7 @@ static int  GamePad_ReadAxis(struct GamePad_s* this, tAxisState_s* axisState)
 
     while (read(this->fileDesc, &l_Ev, sizeof(l_Ev)) == sizeof(l_Ev))
     {
-        float l_NormalizedVal = (float)l_NormalizedVal;
+        float l_NormalizedVal = (float)l_Ev.value/32767.0f;
 
         if (EV_ABS ==  l_Ev.type)
         {
@@ -197,6 +256,8 @@ int main()
         fprintf(stderr, "Fail to initialize gamepad!!!\n");
         return 1;
     }
+
+    printf("Begin reading data:\n");
 
     while(!stop)
     {

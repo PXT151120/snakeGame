@@ -6,7 +6,6 @@ extern "C"
 {
 #endif
 
-#include "filter.h"
 
 typedef struct
 {
@@ -24,12 +23,21 @@ typedef struct
 
 /* Reference type*/
 struct GamePad_s;
+struct AxisFilter_s;
+
+
+typedef struct AxisFilter_s
+{
+    tAxisState_s prevVal;
+    float deadzone;
+} tAxisFilter_s;
+
 
 typedef struct GamePad_s
 {
     //Properties
     int fileDesc;
-    tAxisFilter_s axisFilter;
+    struct AxisFilter_s axisFilter;
 
     // Methods
     int (*init)(struct GamePad_s*);
@@ -40,7 +48,6 @@ typedef struct GamePad_s
 
 tGamePad_s* GamePad_Constructor(void);
 void        GamePad_Destructor(struct GamePad_s*);
-
 
 #ifdef __cplusplus
 }
