@@ -6,6 +6,8 @@
         "udev_helper.h": "c",
         "type_traits": "c",
         "filter.h": "c",
-        "input.h": "c"
+        "input.h": "c",
+        "event_queue.h": "c",
+        "pthread.h": "c"
     }
 }
