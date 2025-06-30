@@ -1,5 +1,5 @@
-
 #include <string.h>
+#include <stdio.h>
 #include "event_queue.h"
 
 
@@ -23,18 +23,20 @@ bool EventQueueI_Push(tEventQueue_s* qObj, const tInputEvent_s* inEvent)
     bool l_RetVal = false;
     if (qObj)
     {
-        int next = (qObj->qHead + 1) % QUEUE_MAX_EVENTS;
+        int l_Next = (qObj->qHead + 1) % QUEUE_MAX_EVENTS;
 
         pthread_mutex_lock(&qObj->mutexLock);
 
         // Queue is full
-        if (next == qObj->qTail)
+        if (l_Next == qObj->qTail)
         {
             pthread_mutex_unlock(&qObj->mutexLock);
         }
         else
         {
+            printf("[Push] Signaling data ready\n");
             qObj->buffer[qObj->qHead] = *inEvent;
+            qObj->qHead = l_Next;
             pthread_cond_signal(&qObj->condEmpty);
             pthread_mutex_unlock(&qObj->mutexLock);
             l_RetVal = true;
@@ -55,6 +57,7 @@ bool EventQueueI_Pop(tEventQueue_s* qObj, tInputEvent_s* outEvent)
         // Queue is empty, wait
         while (qObj->qHead == qObj->qTail)
         {
+            printf("[Pop] Waiting...\n");
             pthread_cond_wait(&qObj->condEmpty, &qObj->mutexLock);
         }
 

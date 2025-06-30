@@ -6,7 +6,7 @@
 #include "input.h"
 
 
-#define QUEUE_MAX_EVENTS 64
+#define QUEUE_MAX_EVENTS 10
 
 
 typedef enum
