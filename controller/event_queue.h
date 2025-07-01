@@ -5,45 +5,43 @@
 #include <pthread.h>
 #include "input.h"
 
-
-#define QUEUE_MAX_EVENTS 10
-
+#define MAX_QUEUE_EVENTS   10
 
 typedef enum
 {
     EVENT_AXIS = 0,
     EVENT_BTN_PRESSED,
     EVENT_BTN_RELEASED
-} tEvenType_e;
+} tEventType_e;
 
 
 typedef struct
 {
-    tEvenType_e eType;
+    tEventType_e eType;
     union
     {
-        tAxisState_s axisState;
-        struct
-        {
-            int btnCode;
-            int isPressed;
-        };
+        tAxisState_s    axisData;
+        tButtonState_s  btnData;
     };
-} tInputEvent_s;
+} tEventData_s;
+
 
 typedef struct
 {
-    tInputEvent_s buffer[QUEUE_MAX_EVENTS];
-    int qHead;
+    tEventData_s queue[MAX_QUEUE_EVENTS];
     int qTail;
+    int qHead;
+    int qUsedSlot;
+
     pthread_mutex_t mutexLock;
-    pthread_cond_t condEmpty;
+    pthread_cond_t  condEmpty;
+
 } tEventQueue_s;
 
 
-void EventQueueI_Init(tEventQueue_s* qObj);
-bool EventQueueI_Push(tEventQueue_s* qObj, const tInputEvent_s* inEvent);
-bool EventQueueI_Pop(tEventQueue_s* qObj, tInputEvent_s* outEvent);
-void EventQueueI_Destroy(tEventQueue_s* qObj);
+void EventQueueI_Init(tEventQueue_s *qObj);
+void EventQueueI_Destroy(tEventQueue_s *qObj);
+bool EventQueueI_Push(tEventQueue_s* qObj, const tEventData_s* inData);
+bool EventQueueI_Pop(tEventQueue_s* qObj, tEventData_s* outData);
 
 #endif

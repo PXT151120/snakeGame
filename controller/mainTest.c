@@ -1,42 +1,33 @@
-#include <stdio.h>
-#include <signal.h>
-#include <pthread.h>
 #include <unistd.h>
-#include <stdbool.h>
+#include <stdio.h>
 
 #include "event_queue.h"
 
 
-typedef struct
-{
-    tEventQueue_s *queue;
-    bool running;
-} tInputContex_s;
+bool isRunning = true;
 
-
-void* input_thread(void *arg)
+void* inputThread(void *arg)
 {
-    tInputContex_s *l_Ctx = (tInputContex_s*)arg;
+    tEventQueue_s* l_Qctx = (tEventQueue_s*)arg;
     int l_Tick = 0;
 
-    while(l_Ctx->running)
+    while(isRunning)
     {
-        tInputEvent_s l_Ev;
+        tEventData_s l_Ev;
 
         l_Ev.eType = EVENT_AXIS;
-        l_Ev.axisState.lx = (l_Tick % 100) / 100.0f;
-        l_Ev.axisState.ly = (l_Tick % 50) / 50.0f;
-        l_Ev.axisState.rx = (l_Tick % 100) / 100.0f;
-        l_Ev.axisState.ry = (l_Tick % 50) / 50.0f;
+        l_Ev.axisData.lx = (l_Tick % 100) / 100.0f;
+        l_Ev.axisData.ly = (l_Tick % 50) / 50.0f;
+        l_Ev.axisData.rx = (l_Tick % 100) / 100.0f;
+        l_Ev.axisData.ry = (l_Tick % 50) / 50.0f;
 
-        if (!EventQueueI_Push(l_Ctx->queue, &l_Ev))
+        if (EventQueueI_Push(l_Qctx, &l_Ev))
         {
-            printf("[InputThread] Queue full, dropping event.\n");
+            printf("[inputThread]: Push lx: %.2f, ly: %.2f, rx: %.2f, ry: %.2f\n", l_Ev.axisData.lx, l_Ev.axisData.ly, l_Ev.axisData.rx, l_Ev.axisData.ry);
         }
         else
         {
-            printf("[InputThread] Pushed event: lx=%.2f ly=%.2f\n", l_Ev.axisState.lx, l_Ev.axisState.ly);
-            printf("[InputThread] Pushed event: rx=%.2f ry=%.2f\n", l_Ev.axisState.rx, l_Ev.axisState.ry);
+            printf("[inputThread]: Queue is full\n");
         }
 
         l_Tick++;
@@ -46,36 +37,41 @@ void* input_thread(void *arg)
     return NULL;
 }
 
+
+
 int main()
 {
-    tEventQueue_s l_Queue;
-    tInputContex_s l_InputCtx = {.queue = &l_Queue, .running = true};
-
-    EventQueueI_Init(l_InputCtx.queue);
-
+    tEventQueue_s qObj;
     pthread_t l_Tid;
 
-    if (pthread_create(&l_Tid, NULL, input_thread, &l_InputCtx))
-    {
-        perror("Create input thread failed\n");
-        return 1;
-    }
+
+    EventQueueI_Init(&qObj);
+
+    pthread_create (&l_Tid,
+			        NULL,
+			        inputThread,
+			        &qObj);
+
+    sleep(6);
 
     for (int i = 0; i < 5; i++)
     {
-        tInputEvent_s l_Ev;
-        EventQueueI_Pop(l_InputCtx.queue, &l_Ev);
-
-        if (l_Ev.eType == EVENT_AXIS)
+        tEventData_s l_Ev;
+        if (EventQueueI_Pop(&qObj, &l_Ev))
         {
-            printf("[Main] Popped event: lx=%.2f ly=%.2f\n", l_Ev.axisState.lx, l_Ev.axisState.ly);
-            printf("[Main] Popped event: rx=%.2f ry=%.2f\n", l_Ev.axisState.rx, l_Ev.axisState.ry);
+            printf("[main]: Pop lx: %.2f, ly: %.2f, rx: %.2f, ry: %.2f\n", l_Ev.axisData.lx, l_Ev.axisData.ly, l_Ev.axisData.rx, l_Ev.axisData.ry);
+        }
+        else
+        {
+            printf("[main]: Queue is full\n");
         }
     }
 
-    l_InputCtx.running = false;
+    isRunning = false;
+
     pthread_join(l_Tid, NULL);
-    EventQueueI_Destroy(l_InputCtx.queue);
+    EventQueueI_Destroy(&qObj);
+
     return 0;
 }
 

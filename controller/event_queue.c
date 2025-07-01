@@ -1,52 +1,63 @@
 #include <string.h>
-#include <stdio.h>
+
 #include "event_queue.h"
 
 
-void EventQueueI_Init(tEventQueue_s* qObj)
+void EventQueueI_Init(tEventQueue_s *qObj)
 {
-    if (!qObj)  return;
-    else
+    if (qObj)
     {
-        memset(qObj->buffer, 0, sizeof(((tEventQueue_s*)0)->buffer));
-
         qObj->qHead = 0;
         qObj->qTail = 0;
+        qObj->qUsedSlot = 0;
+        memset(qObj->queue, 0, sizeof(((tEventQueue_s*)0)->queue));
 
         pthread_mutex_init(&qObj->mutexLock, NULL);
         pthread_cond_init(&qObj->condEmpty, NULL);
     }
 }
 
-bool EventQueueI_Push(tEventQueue_s* qObj, const tInputEvent_s* inEvent)
+
+void EventQueueI_Destroy(tEventQueue_s *qObj)
 {
-    bool l_RetVal = false;
     if (qObj)
     {
-        int l_Next = (qObj->qHead + 1) % QUEUE_MAX_EVENTS;
+        pthread_mutex_destroy(&qObj->mutexLock);
+        pthread_cond_destroy(&qObj->condEmpty);
+    }
+}
 
+
+bool EventQueueI_Push(tEventQueue_s* qObj, const tEventData_s* inData)
+{
+    bool l_RetVal = false;
+
+    if (qObj)
+    {
         pthread_mutex_lock(&qObj->mutexLock);
 
-        // Queue is full
-        if (l_Next == qObj->qTail)
+        // If queue is not full
+        if (qObj->qUsedSlot < MAX_QUEUE_EVENTS)
         {
-            pthread_mutex_unlock(&qObj->mutexLock);
-        }
-        else
-        {
-            printf("[Push] Signaling data ready\n");
-            qObj->buffer[qObj->qHead] = *inEvent;
-            qObj->qHead = l_Next;
+            qObj->queue[qObj->qHead] = *inData;
+            qObj->qHead = (qObj->qHead + 1) % MAX_QUEUE_EVENTS;
+            qObj->qUsedSlot++;
+
+            // Allow pop to be ran
             pthread_cond_signal(&qObj->condEmpty);
-            pthread_mutex_unlock(&qObj->mutexLock);
+
             l_RetVal = true;
         }
+        else{}
+
+        pthread_mutex_unlock(&qObj->mutexLock);
     }
 
     return l_RetVal;
 }
 
-bool EventQueueI_Pop(tEventQueue_s* qObj, tInputEvent_s* outEvent)
+
+bool EventQueueI_Pop(tEventQueue_s* qObj, tEventData_s* outData)
 {
     bool l_RetVal = false;
 
@@ -54,27 +65,21 @@ bool EventQueueI_Pop(tEventQueue_s* qObj, tInputEvent_s* outEvent)
     {
         pthread_mutex_lock(&qObj->mutexLock);
 
-        // Queue is empty, wait
-        while (qObj->qHead == qObj->qTail)
+        // If queue is empty, wait until push is called
+        while (!qObj->qUsedSlot)
         {
-            printf("[Pop] Waiting...\n");
             pthread_cond_wait(&qObj->condEmpty, &qObj->mutexLock);
         }
 
-        *outEvent = qObj->buffer[qObj->qTail];
-        qObj->qTail = (qObj->qTail + 1) % QUEUE_MAX_EVENTS;
+        *outData = qObj->queue[qObj->qTail];
+        qObj->qTail = (qObj->qTail + 1) % MAX_QUEUE_EVENTS;
+        qObj->qUsedSlot--;
+        l_RetVal = true;
 
         pthread_mutex_unlock(&qObj->mutexLock);
-        l_RetVal = true;
     }
 
     return l_RetVal;
-}
-
-void EventQueueI_Destroy(tEventQueue_s* qObj)
-{
-    pthread_mutex_destroy(&qObj->mutexLock);
-    pthread_cond_destroy(&qObj->condEmpty);
 }
 
 
